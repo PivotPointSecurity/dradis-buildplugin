@@ -20,6 +20,37 @@ if [ "$plugin" = "dradis-yournamehere" ]; then
 	exit
 fi
 
+# Find gem_version.rb file
+versionfile=`find . -name gem_version.rb`
+
+# Get current version
+cmajor=`grep -n 'MAJOR ' ${versionfile} | awk {'print $4'}`
+cminor=`grep -n 'MINOR ' ${versionfile} | awk {'print $4'}`
+ctiny=`grep -n 'TINY ' ${versionfile} | awk {'print $4'}`
+cpre=`grep -n 'PRE ' ${versionfile} | awk {'print $4'}`
+if [ "$cpre" == "nil" ]; then
+  cpre=0
+fi
+
+# Prompt for version number
+read -ep "Version: " -i "${cmajor}.${cminor}.${ctiny}.${cpre}" nversion
+
+# parse new version
+IFS='.'
+read -a versionparts <<< "$nversion"
+IFS=' '
+
+nmajor="${versionparts[0]}"
+nminor="${versionparts[1]}"
+ntiny="${versionparts[2]}"
+npre="${versionparts[3]}"
+
+# Update gem_version.rb
+sed -i "s/MAJOR\ =.*/MAJOR\ =\ ${nmajor}/g" ${versionfile}
+sed -i "s/MINOR\ =.*/MINOR\ =\ ${nminor}/g" ${versionfile}
+sed -i "s/TINY\ =.*/TINY\ =\ ${ntiny}/g" ${versionfile}
+sed -i "s/PRE\ =.*/PRE\ =\ ${npre}/g" ${versionfile}
+
 
 if [[ "$#" -eq 1 && "$1" = "local" ]]; then
 	buildlocal=1
@@ -72,5 +103,11 @@ else
 	bundle install
 fi
 
-god restart dradispro-unicorn
+while true; do
+    read -p "Do you wish to restart unicorn now? " yn
+    case $yn in
+        [Yy]* ) god restart dradispro-unicorn; break;;
+        * ) echo "Be sure to restart it later:  god restart dradispro-unicorn"; break;;
+    esac
+done
 
